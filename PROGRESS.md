@@ -9,7 +9,7 @@ Commit after every class. Tag every Friday: `git tag week-N && git push origin w
 - [x] /health runs locally
 - [x] docs/QUESTIONS.md: 10 real questions
 - [x] 50+ pages collected, DATASET.md filled, sample in data/sample/
-- [ ] Tag week-1 pushed
+- [x] Tag week-1 pushed
 
 ## Week 2 (tag week-2 by Fri 30 Oct)
 - [ ] POST /chat calls an LLM and returns structured JSON
@@ -29,4 +29,4 @@ Commit after every class. Tag every Friday: `git tag week-N && git push origin w
 ## Daily log
 | Date | What I did today | Commit |
 |---|---|---|
-| 2026-10-25 | Confirmed repository registration, verified local /health, documented five PDFs totalling 639 physical pages, committed three sample PDFs, and confirmed 10 evaluation questions. | 8b0954e |
+| 2026-10-25 | Confirmed repository registration, verified local /health, documented five PDFs totalling 639 physical pages, committed three sample PDFs, confirmed 10 evaluation questions, and pushed the week-1 tag. | 8b0954e, 99f8f8c |

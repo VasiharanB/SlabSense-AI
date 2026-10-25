@@ -3,11 +3,12 @@
 Commit after every class. Tag every Friday: `git tag week-N && git push origin week-N`.
 
 ## Week 1 (tag week-1 by Fri 23 Oct)
-- [ ] Repo created from the Examate template and registered on the form
-- [ ] README top section filled from my project card
-- [ ] /health runs locally
-- [ ] docs/QUESTIONS.md: 10 real questions
-- [ ] 50+ pages collected, DATASET.md filled, sample in data/sample/
+- [x] Repo created from the Examate template
+- [x] Repository registered on the form
+- [x] README top section filled from my project card
+- [x] /health runs locally
+- [x] docs/QUESTIONS.md: 10 real questions
+- [x] 50+ pages collected, DATASET.md filled, sample in data/sample/
 - [ ] Tag week-1 pushed
 
 ## Week 2 (tag week-2 by Fri 30 Oct)
@@ -28,4 +29,4 @@ Commit after every class. Tag every Friday: `git tag week-N && git push origin w
 ## Daily log
 | Date | What I did today | Commit |
 |---|---|---|
-| | | |
+| 2026-10-25 | Confirmed repository registration, verified local /health, documented five PDFs totalling 639 physical pages, committed three sample PDFs, and confirmed 10 evaluation questions. | 8b0954e |

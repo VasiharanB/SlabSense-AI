@@ -1,0 +1,42 @@
+
+# Git
+.git/
+.github/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing and linting
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Local databases
+data/*.sqlite3
+data/*.sqlite3-shm
+data/*.sqlite3-wal
+
+# IDE files
+.vscode/
+.idea/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Documentation and development artifacts
+*.log

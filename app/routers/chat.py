@@ -15,18 +15,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["chat"])
 
 
-def get_gemini_provider(request: Request) -> GeminiProvider:
-    """Retrieve the primary Gemini provider."""
+def get_gemini_provider(request: Request) -> GeminiProvider | None:
+    """Retrieve the primary Gemini provider, if configured."""
 
-    provider = getattr(request.app.state, "gemini_provider", None)
-
-    if provider is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Gemini provider is not configured.",
-        )
-
-    return provider
+    return getattr(request.app.state, "gemini_provider", None)
 
 
 def get_gemini_fallback_provider(
@@ -47,7 +39,7 @@ async def chat(
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
     provider: Annotated[
-        GeminiProvider,
+        GeminiProvider | None,
         Depends(get_gemini_provider),
     ],
     fallback_provider: Annotated[
@@ -56,6 +48,13 @@ async def chat(
     ],
 ) -> ChatResponse:
     """Accept a message, generate a response and record its usage."""
+
+    # Check provider availability after request validation.
+    if provider is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Gemini provider is not configured.",
+        )
 
     service = ChatService(
         provider=provider,

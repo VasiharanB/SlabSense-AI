@@ -1,4 +1,4 @@
-
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import httpx
@@ -17,7 +17,15 @@ TRANSIENT_ERROR_NAMES = frozenset(
 
 
 class GeminiProviderError(RuntimeError):
-    """Raised when Gemini does not return a usable text response."""
+    """Raised when Gemini does not return a usable response."""
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def _exception_chain(error: BaseException):
@@ -119,6 +127,65 @@ class GeminiTextResult:
     usage: GeminiUsage
 
 
+@dataclass(frozen=True, slots=True)
+class GeminiStreamEvent:
+    """A text delta or the final completed interaction."""
+
+    text: str | None = None
+    result: GeminiTextResult | None = None
+
+
+def _build_usage(usage: object | None) -> GeminiUsage:
+    """Convert the SDK usage object into our application schema."""
+
+    return GeminiUsage(
+        input_tokens=_token_value(
+            usage,
+            "total_input_tokens",
+        ),
+        output_tokens=_token_value(
+            usage,
+            "total_output_tokens",
+        ),
+        thought_tokens=_token_value(
+            usage,
+            "total_thought_tokens",
+        ),
+        tool_use_tokens=_token_value(
+            usage,
+            "total_tool_use_tokens",
+        ),
+        cached_tokens=_token_value(
+            usage,
+            "total_cached_tokens",
+        ),
+        total_tokens=_token_value(
+            usage,
+            "total_tokens",
+        ),
+    )
+
+
+def _stream_error_status(error_code: object) -> int | None:
+    """Map known Gemini stream error codes to HTTP status codes."""
+
+    value = str(error_code or "").strip().lower()
+
+    if value.isdigit():
+        return int(value)
+
+    return {
+        "gateway_timeout": 504,
+        "deadline_exceeded": 504,
+        "resource_exhausted": 429,
+        "too_many_requests": 429,
+        "rate_limit_exceeded": 429,
+        "unavailable": 503,
+        "service_unavailable": 503,
+        "internal": 500,
+    }.get(value)
+
+
 class GeminiProvider:
     """Async adapter for Google's Gemini Interactions API."""
 
@@ -171,7 +238,7 @@ class GeminiProvider:
         )
 
     async def generate_text(self, prompt: str) -> GeminiTextResult:
-        """Generate a single-turn text response from Gemini."""
+        """Generate a single-turn non-streaming response."""
 
         if not prompt or not prompt.strip():
             raise ValueError("Prompt cannot be empty.")
@@ -190,41 +257,104 @@ class GeminiProvider:
                 "Gemini completed the interaction without text output."
             )
 
-        usage = interaction.usage
-
-        gemini_usage = GeminiUsage(
-            input_tokens=_token_value(
-                usage,
-                "total_input_tokens",
-            ),
-            output_tokens=_token_value(
-                usage,
-                "total_output_tokens",
-            ),
-            thought_tokens=_token_value(
-                usage,
-                "total_thought_tokens",
-            ),
-            tool_use_tokens=_token_value(
-                usage,
-                "total_tool_use_tokens",
-            ),
-            cached_tokens=_token_value(
-                usage,
-                "total_cached_tokens",
-            ),
-            total_tokens=_token_value(
-                usage,
-                "total_tokens",
-            ),
-        )
-
         return GeminiTextResult(
             interaction_id=interaction.id,
             text=generated_text,
             model=interaction.model or self.model,
-            usage=gemini_usage,
+            usage=_build_usage(interaction.usage),
         )
+
+    async def stream_text(
+        self,
+        prompt: str,
+    ) -> AsyncIterator[GeminiStreamEvent]:
+        """Stream text deltas and return final interaction metadata."""
+
+        if not prompt or not prompt.strip():
+            raise ValueError("Prompt cannot be empty.")
+
+        stream = await self._async_client.interactions.create(
+            model=self.model,
+            input=prompt,
+            store=False,
+            stream=True,
+            timeout=self.timeout_seconds,
+        )
+
+        collected_text: list[str] = []
+        completed = False
+
+        async for event in stream:
+            event_type = getattr(event, "event_type", None)
+
+            if event_type == "step.delta":
+                delta = getattr(event, "delta", None)
+
+                if getattr(delta, "type", None) == "text":
+                    chunk = getattr(delta, "text", "") or ""
+
+                    if chunk:
+                        collected_text.append(chunk)
+                        yield GeminiStreamEvent(text=chunk)
+
+            elif event_type == "interaction.completed":
+                interaction = getattr(event, "interaction", None)
+
+                if interaction is None:
+                    raise GeminiProviderError(
+                        "Gemini stream completed without interaction metadata."
+                    )
+
+                generated_text = "".join(collected_text)
+
+                if not generated_text.strip():
+                    raise GeminiProviderError(
+                        "Gemini completed the stream without text output."
+                    )
+
+                result = GeminiTextResult(
+                    interaction_id=str(
+                        getattr(interaction, "id", "") or ""
+                    ),
+                    text=generated_text,
+                    model=getattr(
+                        interaction,
+                        "model",
+                        None,
+                    ) or self.model,
+                    usage=_build_usage(
+                        getattr(interaction, "usage", None)
+                    ),
+                )
+
+                completed = True
+
+                yield GeminiStreamEvent(result=result)
+                break
+
+            elif event_type == "error":
+                error_data = getattr(event, "error", None)
+
+                error_message = (
+                    getattr(error_data, "message", None)
+                    or "Gemini streaming interaction failed."
+                )
+
+                error_code = getattr(
+                    error_data,
+                    "code",
+                    None,
+                )
+
+                raise GeminiProviderError(
+                    str(error_message),
+                    status_code=_stream_error_status(error_code),
+                )
+
+        if not completed:
+            raise GeminiProviderError(
+                "Gemini stream ended without an interaction.completed event."
+            )
 
     async def aclose(self) -> None:
         """Close both SDK clients."""

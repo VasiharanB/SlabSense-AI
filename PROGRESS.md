@@ -17,7 +17,7 @@ Commit after every class. Tag every Friday: `git tag week-N && git push origin w
 - [x] Cost log + GET /usage
 - [x] Docker Compose (API + Postgres/pgvector) runs
 - [x] CI green on Python 3.12 and 3.14, including Docker Compose validation and image build
-- [ ] Production deployment verified and live API link added to README
+- [x] Production deployment live; Swagger and POST /chat returned 200 OK, with the successful request persisted in Supabase and the live API link documented in README
 - [ ] Tag week-2 pushed
 
 ## Week 3 (tag week-3 by Fri 6 Nov)
@@ -31,4 +31,4 @@ Commit after every class. Tag every Friday: `git tag week-N && git push origin w
 | Date | What I did today | Commit |
 |---|---|---|
 | 2026-10-25 | Confirmed repository registration, verified local /health, documented five PDFs totalling 639 physical pages, committed three sample PDFs, confirmed 10 evaluation questions, and pushed the week-1 tag. | 8b0954e, 99f8f8c |
-| 2026-11-01 | Implemented and tested Gemini SSE streaming, verified usage persistence in Docker PostgreSQL, passed local Ruff and 20 tests, and rebuilt the Docker API. GitHub Actions passed on Python 3.12 and 3.14; the Week 2 pull request was opened. Production deployment and the week-2 tag remain pending. | f96c038 |
+| 2026-11-01 | Implemented and tested Gemini SSE streaming, verified local Ruff and 20 tests, passed CI on Python 3.12 and 3.14, deployed the API to Render Free, confirmed POST /chat returned 200 OK, and matched its request ID to a persisted Supabase usage record. Live deployment documented; the week-2 tag still needs to be pushed. | f96c038, 6ce0ece |

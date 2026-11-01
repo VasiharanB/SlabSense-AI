@@ -1,6 +1,6 @@
 # SlabSense
 
-**An evidence-grounded AI assistant for Tamil Nadu electricity tariffs and regulations.**
+**An AI assistant under development for Tamil Nadu electricity tariffs and regulations.**
 
 ## Problem
 
@@ -144,9 +144,19 @@ View API logs with `docker compose logs -f api`. Stopping the stack with `docker
 
 The target is at least 98% version accuracy on a 150-question date-specific test set. This is a goal to validate experimentally, not a measured result.
 
-## Live link
+## Live deployment (Week 2)
 
-Production deployment is pending. The local and Docker URLs above are not public endpoints; the production API URL will be added here after deployment and verification.
+- **Production API:** [https://slabsense-ai-api.onrender.com](https://slabsense-ai-api.onrender.com)
+- **Interactive Swagger documentation:** [https://slabsense-ai-api.onrender.com/docs](https://slabsense-ai-api.onrender.com/docs)
+- **Health endpoint:** [GET /health](https://slabsense-ai-api.onrender.com/health)
+
+The Render deployment is live. Production verification completed for the Swagger documentation (`200 OK`) and the Gemini-backed `POST /chat` endpoint (`200 OK`). The successful chat request was also confirmed in Supabase's `usage_records` table using its request ID and model metadata.
+
+### Current capability boundary
+
+Week 2 provides general Gemini-backed chat, streaming, retry/fallback handling, and usage tracking. The current `/chat` implementation does **not** retrieve or cite the regulatory PDF corpus: its response metadata reports `grounded: false` and an empty `sources` list. Do not rely on it as a verified source for current Tamil Nadu tariff rates, slab thresholds, or subsidy eligibility.
+
+Document parsing, embeddings, pgvector retrieval, and evidence-backed `/ask` answers with document/page citations are Week 3 work.
 
 ## Acknowledgements
 

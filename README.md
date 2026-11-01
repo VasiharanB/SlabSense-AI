@@ -1,6 +1,6 @@
 # SlabSense
 
-**An evidence-grounded AI assistant for Tamil Nadu electricity tariffs and regulations.**
+**An AI assistant under development for Tamil Nadu electricity tariffs and regulations.**
 
 ## Problem
 
@@ -32,7 +32,7 @@ The target dataset includes tariff orders, applicable subsidy orders, electricit
 
 See [docs/QUESTIONS.md](docs/QUESTIONS.md).
 
-## Run it
+## Run locally
 
 Create and activate a virtual environment.
 
@@ -53,7 +53,7 @@ pip install -r requirements-dev.txt
 Copy-Item .env.example .env
 ```
 
-Start the API:
+Set `GEMINI_API_KEY` in `.env`, then start the API:
 
 ```bash
 uvicorn app.main:app --reload
@@ -61,13 +61,102 @@ uvicorn app.main:app --reload
 
 Check the health endpoint at [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health). Interactive API documentation is available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
+## API endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/health` | API health check |
+| `POST` | `/chat` | Generate a structured AI chat response |
+| `POST` | `/chat/stream` | Stream response text as Server-Sent Events (SSE) |
+| `GET` | `/usage` | Return aggregate usage, model breakdown, and recent requests |
+
+### Chat request
+
+Both chat endpoints accept a JSON body with a `message` field:
+
+```json
+{
+  "message": "Explain electricity tariff slabs briefly."
+}
+```
+
+Example non-streaming request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Explain electricity tariff slabs briefly."}'
+```
+
+### Streaming response
+
+The `POST /chat/stream` endpoint responds with `Content-Type: text/event-stream`. It emits:
+
+- `delta` — an incremental text chunk.
+- `completed` — the completed response and usage metadata.
+- `done` — the end-of-stream marker.
+- `error` — a stream error after the response has started.
+
+Example request (the `-N` option disables curl output buffering):
+
+```bash
+curl -N -X POST http://127.0.0.1:8000/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Explain electricity tariff slabs briefly."}'
+```
+
+### Usage summary
+
+```bash
+curl "http://127.0.0.1:8000/usage?recent_limit=20"
+```
+
+Usage records include model and token information and an estimated cost where pricing is available. The estimate is not a billing statement.
+
+## Run with Docker Compose
+
+The Compose stack runs the FastAPI service and PostgreSQL with pgvector. It binds the API to `127.0.0.1:8000` and PostgreSQL to `127.0.0.1:5433`.
+
+1. Copy the example environment file:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+2. Set `GEMINI_API_KEY` and a strong, private `POSTGRES_PASSWORD` in `.env`. Do not commit `.env` or share its values.
+
+3. Build and start the services:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+4. Check service health and API availability:
+
+   ```bash
+   docker compose ps
+   curl http://127.0.0.1:8000/health
+   ```
+
+View API logs with `docker compose logs -f api`. Stopping the stack with `docker compose down` preserves the named PostgreSQL volume. Do not use `docker compose down -v` unless you intentionally want to delete that database volume and its data.
+
 ## Evaluation target
 
 The target is at least 98% version accuracy on a 150-question date-specific test set. This is a goal to validate experimentally, not a measured result.
 
-## Live link
+## Live deployment (Week 2)
 
-To be added after deployment.
+- **Production API:** [https://slabsense-ai-api.onrender.com](https://slabsense-ai-api.onrender.com)
+- **Interactive Swagger documentation:** [https://slabsense-ai-api.onrender.com/docs](https://slabsense-ai-api.onrender.com/docs)
+- **Health endpoint:** [GET /health](https://slabsense-ai-api.onrender.com/health)
+
+The Render deployment is live. Production verification completed for the Swagger documentation (`200 OK`) and the Gemini-backed `POST /chat` endpoint (`200 OK`). The successful chat request was also confirmed in Supabase's `usage_records` table using its request ID and model metadata.
+
+### Current capability boundary
+
+Week 2 provides general Gemini-backed chat, streaming, retry/fallback handling, and usage tracking. The current `/chat` implementation does **not** retrieve or cite the regulatory PDF corpus: its response metadata reports `grounded: false` and an empty `sources` list. Do not rely on it as a verified source for current Tamil Nadu tariff rates, slab thresholds, or subsidy eligibility.
+
+Document parsing, embeddings, pgvector retrieval, and evidence-backed `/ask` answers with document/page citations are Week 3 work.
 
 ## Acknowledgements
 

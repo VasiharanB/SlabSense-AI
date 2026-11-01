@@ -1,0 +1,52 @@
+
+services:
+  db:
+    image: pgvector/pgvector:0.8.7-pg18-trixie
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-slabsense}
+      POSTGRES_USER: ${POSTGRES_USER:-slabsense_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+
+    ports:
+      - "127.0.0.1:5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: slabsense-api:week2
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      ENVIRONMENT: docker
+      USAGE_DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-slabsense_app}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-slabsense}"
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    name: slabsense_postgres_data
